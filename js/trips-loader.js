@@ -19,7 +19,7 @@
 
   let tripsIndex;
   try {
-    const res = await fetch('trips/index.json');
+    const res = await fetch('/viaggi/trips/index.json');
     if (!res.ok) throw new Error('index.json non trovato');
     tripsIndex = await res.json();
   } catch (e) {
@@ -37,7 +37,7 @@
     let info;
 
     try {
-      const r = await fetch(`trips/${folder}/info.json`);
+      const r = await fetch(`/viaggi/trips/${folder}/info.json`);
       if (!r.ok) throw new Error();
       info = await r.json();
     } catch {
@@ -45,11 +45,11 @@
       continue;
     }
 
-    const coverSrc = `trips/${folder}/${trip.cover || info.cover || 'foto1.jpg'}`;
+    const coverSrc = `/viaggi/trips/${folder}/${trip.cover || info.cover || 'foto1.jpg'}`;
 
     // Crea card
     const card = document.createElement('a');
-    card.href = `trips/${folder}/`;
+    card.href = `/viaggi/trips/${folder}/`;
     card.className = 'trip-card';
 
     card.innerHTML = `

@@ -1,1 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Viaggio</title>
+  <link rel="stylesheet" href="../../style.css"/>
+  <link rel="stylesheet" href="style.css"/>
+  <!-- Font caricati dinamicamente da JS in base al paese -->
+</head>
+<body class="trip-page">
 
+<a href="../../index.html" class="back-link">← Tutti i viaggi</a>
+
+<div id="trip-content">
+  <div class="loading-msg">Caricamento viaggio...</div>
+</div>
+
+<!-- Lightbox per le foto -->
+<div id="lightbox" class="lightbox hidden">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-prev" onclick="changePhoto(-1)">‹</button>
+  <img id="lightbox-img" src="" alt=""/>
+  <button class="lightbox-next" onclick="changePhoto(1)">›</button>
+  <div id="lightbox-counter" class="lightbox-counter"></div>
+</div>
+
+<script src="../../js/country-shapes.js"></script>
+<script src="../../js/trip-renderer.js"></script>
+</body>
+</html>

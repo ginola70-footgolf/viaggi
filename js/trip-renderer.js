@@ -48,8 +48,7 @@
     <div class="cover-shape-section">
       <div>
         <div class="cover-shape-wrapper" id="cover-wrapper">
-          <!-- SVG clip-path iniettato da JS -->
-          <img id="cover-img" class="cover-shape-img" src="" alt="Copertina ${info.nazione}" />
+          <!-- SVG generato da JS -->
         </div>
         <p class="cover-shape-caption">✦ ${info.nazione} ✦</p>
       </div>
@@ -68,10 +67,8 @@
   heroBg.style.backgroundImage = `url('${firstPhoto}')`;
   setTimeout(() => heroBg.classList.add('loaded'), 100);
 
-  // ── 7. Copertina con clip-path a forma di nazione ────────────────────
-  const coverImg = document.getElementById('cover-img');
-  coverImg.src = firstPhoto;
-  applyCountryClip('cover-wrapper', 'cover-img', info.nazione);
+  // ── 7. Copertina con SVG nativo a forma di nazione ──────────────────
+  buildCountrySVG('cover-wrapper', firstPhoto, info.nazione);
 
   // ── 8. Popola galleria (tutte le foto tranne la prima) ───────────────
   const grid = document.getElementById('photo-grid');
@@ -129,8 +126,65 @@ function applyTheme(nazione, temaOverride) {
   }
 }
 
-// ── CLIP-PATH A FORMA DI NAZIONE ────────────────────────────────────────
+// ── COVER A FORMA DI NAZIONE — SVG NATIVO ───────────────────────────────
 /**
+ * Approccio: crea un <svg> visibile dentro il wrapper.
+ * Dentro l'SVG usa <defs><clipPath> + <image> nello stesso documento SVG.
+ * Questo è l'unico metodo garantito cross-browser: il clipPath
+ * e l'elemento che clippa vivono nello stesso contesto SVG,
+ * quindi non ci sono problemi di scope o objectBoundingBox.
+ */
+function buildCountrySVG(wrapperId, photoSrc, nazione) {
+  if (!window.getCountryShape) return;
+  const shape   = window.getCountryShape(nazione);
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) return;
+
+  const clipId  = 'clip-' + Math.random().toString(36).slice(2, 8);
+  const svgNS   = 'http://www.w3.org/2000/svg';
+  const xlinkNS = 'http://www.w3.org/1999/xlink';
+  const VB      = shape.viewBox; // es. "0 0 220 150"
+
+  // Crea SVG responsivo: prende tutta la larghezza del wrapper, altezza auto
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('xmlns', svgNS);
+  svg.setAttribute('viewBox', VB);
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  svg.style.cssText = 'display:block;width:100%;height:100%;';
+
+  // <defs> con <clipPath> che usa il path della nazione
+  const defs    = document.createElementNS(svgNS, 'defs');
+  const clip    = document.createElementNS(svgNS, 'clipPath');
+  clip.setAttribute('id', clipId);
+  const pathEl  = document.createElementNS(svgNS, 'path');
+  pathEl.setAttribute('d', shape.path);
+  clip.appendChild(pathEl);
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+
+  // <image> che occupa tutta la viewBox, ritagliata dalla forma
+  const [,, vw, vh] = VB.split(' ').map(Number);
+  const img = document.createElementNS(svgNS, 'image');
+  img.setAttribute('x', '0');
+  img.setAttribute('y', '0');
+  img.setAttribute('width',  String(vw));
+  img.setAttribute('height', String(vh));
+  img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+  img.setAttribute('clip-path', `url(#${clipId})`);
+  // href moderno + xlink:href per compatibilità
+  img.setAttribute('href', photoSrc);
+  img.setAttributeNS(xlinkNS, 'xlink:href', photoSrc);
+  svg.appendChild(img);
+
+  // Sostituisce il contenuto del wrapper
+  wrapper.innerHTML = '';
+  wrapper.appendChild(svg);
+}
+
+// ── VECCHIO CLIP-PATH (non più usato, tenuto per riferimento) ────────────
+/**
+ * @deprecated — usa buildCountrySVG al suo posto
  * Strategia: usa clipPathUnits="objectBoundingBox" con coordinate 0..1
  * Il path SVG viene normalizzato matematicamente dalla viewBox originale.
  * L'SVG <defs> viene iniettato direttamente nell'<img> wrapper,

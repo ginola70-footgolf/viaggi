@@ -130,122 +130,136 @@ function applyTheme(nazione, temaOverride) {
 }
 
 // ── CLIP-PATH A FORMA DI NAZIONE ────────────────────────────────────────
-function applyCountryClip(wrapperId, imgId, nazione) {
+/**
+ * Strategia: usa clipPathUnits="objectBoundingBox" con coordinate 0..1
+ * Il path SVG viene normalizzato matematicamente dalla viewBox originale.
+ * L'SVG <defs> viene iniettato direttamente nell'<img> wrapper,
+ * e il clip-path applicato inline sull'immagine.
+ * Non dipende da offsetWidth/offsetHeight né dal timing del layout.
+ */
+function applyCountryClipWithTransform(wrapperId, imgId, nazione) {
   if (!window.getCountryShape) return;
 
   const shape = window.getCountryShape(nazione);
   const wrapper = document.getElementById(wrapperId);
-  const img = document.getElementById(imgId);
+  const img     = document.getElementById(imgId);
   if (!wrapper || !img) return;
 
-  const clipId = 'country-clip-' + Date.now();
+  const clipId = 'cc-' + Math.random().toString(36).slice(2, 8);
+  const [vx, vy, vw, vh] = shape.viewBox.split(' ').map(Number);
 
-  // Inietta <svg> con il <clipPath>
+  // Normalizza il path in coordinate 0..1 (objectBoundingBox)
+  const normalizedPath = normalizeSvgPath(shape.path, vx, vy, vw, vh);
+
+  // Costruisci l'SVG con clipPath
   const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width', '0');
+  const svg   = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('xmlns', svgNS);
+  svg.setAttribute('width',  '0');
   svg.setAttribute('height', '0');
-  svg.style.position = 'absolute';
+  svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
 
   const defs = document.createElementNS(svgNS, 'defs');
   const clip = document.createElementNS(svgNS, 'clipPath');
   clip.setAttribute('id', clipId);
   clip.setAttribute('clipPathUnits', 'objectBoundingBox');
 
-  // Normalizza il path da viewBox a 0..1 spazio
-  const [vx, vy, vw, vh] = shape.viewBox.split(' ').map(Number);
-  const scaledPath = scaleSvgPath(shape.path, vx, vy, vw, vh);
-
   const pathEl = document.createElementNS(svgNS, 'path');
-  pathEl.setAttribute('d', scaledPath);
+  pathEl.setAttribute('d', normalizedPath);
 
   clip.appendChild(pathEl);
   defs.appendChild(clip);
   svg.appendChild(defs);
+
+  // Inserisci SVG come primo figlio del wrapper (rimane nel DOM locale)
   wrapper.insertBefore(svg, wrapper.firstChild);
 
-  img.style.clipPath = `url(#${clipId})`;
-  img.style.webkitClipPath = `url(#${clipId})`;
+  // Applica il clip all'immagine con riferimento relativo all'elemento padre
+  img.style.clipPath        = `url(#${clipId})`;
+  img.style.webkitClipPath  = `url(#${clipId})`;
+  // Assicura che l'immagine copra il wrapper correttamente
+  img.style.width      = '100%';
+  img.style.height     = '100%';
+  img.style.objectFit  = 'cover';
+  img.style.display    = 'block';
 }
 
-function scaleSvgPath(pathStr, vx, vy, vw, vh) {
-  // Trasforma coordinate assolute nel range 0..1 (objectBoundingBox)
-  return pathStr.replace(/(-?[\d.]+)/g, (match, num, offset, str) => {
-    // Determina se è coordinata X o Y dal contesto (alternanza semplificata)
-    return match; // restituito così; la scala vera si fa sotto
-  });
+/**
+ * Normalizza un SVG path da coordinate viewBox a range 0..1
+ * necessario per clipPathUnits="objectBoundingBox".
+ * Gestisce tutti i comandi assoluti: M, L, C, S, Q, A, Z
+ */
+function normalizeSvgPath(pathStr, vx, vy, vw, vh) {
+  // Tokenizza il path in coppie comando + coordinate
+  const tokens = pathStr.match(/[MmLlCcSsQqAaZz]|[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g) || [];
 
-  // Approccio più robusto: applica un transform SVG
-  // Invece di parsare il path, usiamo un transform sul clipPath stesso
-}
+  let result = '';
+  let i = 0;
+  let cmd = '';
 
-// Approccio alternativo più robusto con transform
-function applyCountryClipWithTransform(wrapperId, imgId, nazione) {
-  if (!window.getCountryShape) return;
+  const nx = n => ((parseFloat(n) - vx) / vw).toFixed(6); // normalizza X
+  const ny = n => ((parseFloat(n) - vy) / vh).toFixed(6); // normalizza Y
+  const nw = n => (parseFloat(n) / vw).toFixed(6);         // scala larghezza
+  const nh = n => (parseFloat(n) / vh).toFixed(6);         // scala altezza
 
-  const shape = window.getCountryShape(nazione);
-  const wrapper = document.getElementById(wrapperId);
-  const img = document.getElementById(imgId);
-  if (!wrapper || !img || !wrapper.offsetWidth) {
-    // Riprova quando l'immagine è caricata
-    img && img.addEventListener('load', () => applyCountryClipWithTransform(wrapperId, imgId, nazione), { once: true });
-    return;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (/[MmLlCcSsQqAaZz]/.test(t)) {
+      cmd = t;
+      result += cmd;
+      i++;
+      continue;
+    }
+
+    switch (cmd.toUpperCase()) {
+      case 'M': case 'L':
+        result += ` ${nx(tokens[i])} ${ny(tokens[i+1])}`;
+        i += 2; break;
+      case 'C':
+        result += ` ${nx(tokens[i])} ${ny(tokens[i+1])} ${nx(tokens[i+2])} ${ny(tokens[i+3])} ${nx(tokens[i+4])} ${ny(tokens[i+5])}`;
+        i += 6; break;
+      case 'S': case 'Q':
+        result += ` ${nx(tokens[i])} ${ny(tokens[i+1])} ${nx(tokens[i+2])} ${ny(tokens[i+3])}`;
+        i += 4; break;
+      case 'A':
+        // rx ry x-rot large-arc sweep x y
+        result += ` ${nw(tokens[i])} ${nh(tokens[i+1])} ${tokens[i+2]} ${tokens[i+3]} ${tokens[i+4]} ${nx(tokens[i+5])} ${ny(tokens[i+6])}`;
+        i += 7; break;
+      case 'Z':
+        result += ' Z';
+        i++; break;
+      default:
+        result += ' ' + t;
+        i++;
+    }
   }
 
-  const clipId = 'country-clip-' + Math.random().toString(36).slice(2);
-  const W = wrapper.offsetWidth;
-  const H = wrapper.offsetHeight || W;
-
-  const [vx, vy, vw, vh] = shape.viewBox.split(' ').map(Number);
-  const scaleX = W / vw;
-  const scaleY = H / vh;
-  const scale = Math.min(scaleX, scaleY);
-  const tx = (W - vw * scale) / 2 - vx * scale;
-  const ty = (H - vh * scale) / 2 - vy * scale;
-
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('xmlns', svgNS);
-  svg.setAttribute('width', String(W));
-  svg.setAttribute('height', String(H));
-  svg.style.position = 'absolute';
-  svg.style.width = '0';
-  svg.style.height = '0';
-
-  const defs = document.createElementNS(svgNS, 'defs');
-  const clip = document.createElementNS(svgNS, 'clipPath');
-  clip.setAttribute('id', clipId);
-
-  const g = document.createElementNS(svgNS, 'g');
-  g.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
-
-  const pathEl = document.createElementNS(svgNS, 'path');
-  pathEl.setAttribute('d', shape.path);
-  g.appendChild(pathEl);
-  clip.appendChild(g);
-  defs.appendChild(clip);
-  svg.appendChild(defs);
-  document.body.appendChild(svg);
-
-  img.style.clipPath = `url(#${clipId})`;
+  return result.trim();
 }
 
-// Usa la versione con transform (più affidabile)
+// Esporta
 window.applyCountryClip = applyCountryClipWithTransform;
 
-// Richiama dopo il caricamento immagine
-document.addEventListener('DOMContentLoaded', () => {
+// Richiama dopo il rendering del contenuto (immagine già nel DOM)
+// Usa MutationObserver per intercettare quando cover-img viene creato
+const _observer = new MutationObserver(() => {
   const img = document.getElementById('cover-img');
-  if (img) {
-    img.addEventListener('load', () => {
-      const info_naz = document.querySelector('.trip-hero-nation');
-      if (info_naz) {
-        const naz = info_naz.textContent.toLowerCase().trim();
-        applyCountryClipWithTransform('cover-wrapper', 'cover-img', naz);
-      }
-    });
+  if (!img) return;
+  _observer.disconnect();
+
+  const applyWhenReady = () => {
+    const naz = document.querySelector('.trip-hero-nation');
+    if (naz) applyCountryClipWithTransform('cover-wrapper', 'cover-img', naz.textContent.trim());
+  };
+
+  if (img.complete && img.naturalWidth > 0) {
+    applyWhenReady();
+  } else {
+    img.addEventListener('load',  applyWhenReady, { once: true });
+    img.addEventListener('error', applyWhenReady, { once: true }); // applica anche se la foto manca
   }
 });
+_observer.observe(document.getElementById('trip-content') || document.body, { childList: true, subtree: true });
 
 // ── LIGHTBOX ────────────────────────────────────────────────────────────
 let currentPhotos = [];

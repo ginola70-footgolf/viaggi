@@ -282,12 +282,16 @@ body {
   position: relative;
   max-width: 500px;
   width: 100%;
+  /* aspect-ratio quadrato: la forma della nazione verrà scalata dentro */
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
 }
 
-.cover-shape-wrapper svg.country-clip-svg {
+.cover-shape-wrapper svg {
   position: absolute;
   width: 0;
   height: 0;
+  overflow: hidden;
 }
 
 .cover-shape-img {

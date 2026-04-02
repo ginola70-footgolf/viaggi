@@ -1,16 +1,10 @@
 {
-  "nazione": "Giappone",
-  "titolo": "Tra Sakura e Templi",
-  "data": "2023-04-01",
-  "descrizione": "Un viaggio nella terra del sol levante durante la fioritura dei ciliegi. Da Tokyo a Kyoto, passando per Nara e Hiroshima, alla scoperta di una cultura millenaria che convive con la modernità più spinta.",
+  "nazione": "Islanda",
+  "titolo": "Oltre il Confine del Mondo",
+  "data": "2026-03-29",
+  "descrizione": "Un viaggio in Islanda è un'immersione in una natura primordiale e potente, caratterizzata da contrasti spettacolari tra ghiacciai, vulcani attivi, cascate imponenti e spiagge di sabbia nera. .",
   "foto": [
     "foto1.jpg",
-    "foto2.jpg",
-    "foto3.jpg",
-    "foto4.jpg",
-    "foto5.jpg",
-    "foto6.jpg",
-    "foto7.jpg",
-    "foto8.jpg"
+    "foto2.jpg"
   ]
 }

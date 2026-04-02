@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>I Miei Viaggi</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="compass-icon">✦</div>
+    <h1 class="site-title">I Miei Viaggi</h1>
+    <p class="site-subtitle">Un diario del mondo attraverso i miei occhi</p>
+  </div>
+  <div class="header-line"></div>
+</header>
+
+<main>
+  <section class="intro">
+    <p>Ogni viaggio è una storia. Ogni luogo, un capitolo.</p>
+  </section>
+
+  <section class="trips-grid" id="trips-grid">
+    <!-- Le card vengono generate da JavaScript -->
+    <div class="loading-msg">Caricamento viaggi...</div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>Fatto con <span>♥</span> e passione per il viaggio</p>
+</footer>
+
+<script src="js/trips-loader.js"></script>
+</body>
+</html>

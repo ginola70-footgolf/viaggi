@@ -280,18 +280,21 @@ body {
 
 .cover-shape-wrapper {
   position: relative;
-  max-width: 500px;
+  max-width: 480px;
   width: 100%;
-  /* aspect-ratio quadrato: la forma della nazione verrà scalata dentro */
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
+  /* L'SVG dentro gestisce autonomamente le proporzioni via viewBox */
 }
 
 .cover-shape-wrapper svg {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+  transition: filter 0.4s ease, transform 0.4s ease;
+}
+.cover-shape-wrapper svg:hover {
+  filter: drop-shadow(0 12px 40px rgba(201,168,76,0.3));
+  transform: scale(1.02);
 }
 
 .cover-shape-img {

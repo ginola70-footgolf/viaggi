@@ -1,1 +1,29 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Giappone — I Miei Viaggi</title>
+  <link rel="stylesheet" href="../../style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet"/>
+</head>
+<body class="trip-page">
 
+<a href="../../index.html" class="back-link">← Tutti i viaggi</a>
+
+<div id="trip-content">
+  <div class="loading-msg">Caricamento viaggio...</div>
+</div>
+
+<div id="lightbox" class="lightbox hidden">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-prev" onclick="changePhoto(-1)">‹</button>
+  <img id="lightbox-img" src="" alt=""/>
+  <button class="lightbox-next" onclick="changePhoto(1)">›</button>
+  <div id="lightbox-counter" class="lightbox-counter"></div>
+</div>
+
+<script src="../../js/country-shapes.js"></script>
+<script src="../../js/trip-renderer.js"></script>
+</body>
+</html>

@@ -62,7 +62,7 @@
   `;
 
   // ── 6. Imposta hero background (prima foto) ─────────────────────────
-  const firstPhoto = photos[0] || 'foto1.jpg';
+  const firstPhoto = photos[0] || 'foto1.jpeg';
   const heroBg = document.getElementById('hero-bg');
   heroBg.style.backgroundImage = `url('${firstPhoto}')`;
   setTimeout(() => heroBg.classList.add('loaded'), 100);

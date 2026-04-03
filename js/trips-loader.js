@@ -45,7 +45,7 @@
       continue;
     }
 
-    const coverSrc = `/viaggi/trips/${folder}/${trip.cover || info.cover || 'foto1.jpg'}`;
+    const coverSrc = `/viaggi/trips/${folder}/${trip.cover || info.cover || 'foto1.jpeg'}`;
 
     // Crea card
     const card = document.createElement('a');

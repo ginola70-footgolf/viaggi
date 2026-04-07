@@ -448,16 +448,7 @@
       globe.material.map = tex;
       globe.material.needsUpdate = true;
     })
-    .catch(() => {
-      // fallback silenzioso: il globo rimane con il placeholder
-    });
-
-  /* ── Stelle ── */
-  const sp = new Float32Array(1400 * 3);
-  for (let i = 0; i < sp.length; i++) sp[i] = (Math.random() - 0.5) * 90;
-  const sg = new THREE.BufferGeometry();
-  sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xfff4e0, size: 0.055 })));
+    .catch(() => {});
 
   /* ── lat/lon → 3D ── */
   function ll3(lat, lon, r = 1.022) {

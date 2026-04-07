@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
   <style>
     /* ── GLOBE HERO ── */
     #globe-hero {
@@ -332,58 +334,84 @@ const GLOBE_DESTINATIONS = [
   rim.position.set(-3, -1, -2);
   scene.add(rim);
 
-  /* ── Texture procedurale ── */
+  /* ── Texture con D3 + TopoJSON (Natural Earth 110m) ── */
+  const W = 4096, H = 2048;
   const tc = document.createElement('canvas');
-  tc.width = 2048; tc.height = 1024;
+  tc.width = W; tc.height = H;
   const cx = tc.getContext('2d');
 
-  // oceano
-  const og = cx.createLinearGradient(0, 0, 0, 1024);
-  og.addColorStop(0,   '#0c2640');
-  og.addColorStop(0.5, '#0e3858');
-  og.addColorStop(1,   '#0c2640');
-  cx.fillStyle = og; cx.fillRect(0, 0, 2048, 1024);
+  // proiezione equirettangolare mappata sull'intera canvas
+  const projection = d3.geoEquirectangular()
+    .scale(H / Math.PI)
+    .translate([W / 2, H / 2]);
+  const path = d3.geoPath(projection, cx);
 
-  // griglia
-  cx.strokeStyle = 'rgba(80,140,200,0.12)'; cx.lineWidth = 1;
-  for (let lo = -180; lo <= 180; lo += 30) {
-    const x = (lo + 180) / 360 * 2048;
-    cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, 1024); cx.stroke();
+  function drawGlobe(world) {
+    const countries  = topojson.feature(world, world.objects.countries);
+    const borders    = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+    const land       = topojson.merge(world, world.objects.countries.geometries);
+
+    // oceano
+    const og = cx.createLinearGradient(0, 0, 0, H);
+    og.addColorStop(0,   '#091e35');
+    og.addColorStop(0.5, '#0d3050');
+    og.addColorStop(1,   '#091e35');
+    cx.fillStyle = og;
+    cx.fillRect(0, 0, W, H);
+
+    // griglia geografica
+    cx.strokeStyle = 'rgba(80,150,210,0.10)';
+    cx.lineWidth = 1.5;
+    const graticule = d3.geoGraticule()();
+    cx.beginPath(); path(graticule); cx.stroke();
+
+    // shadow leggero sotto la terra
+    cx.fillStyle = 'rgba(0,0,0,0.25)';
+    cx.beginPath(); path(land);
+    cx.fill();
+
+    // terra: ogni paese con colore leggermente variato
+    countries.features.forEach((feat, i) => {
+      const hue   = 115 + (i % 7) * 3;
+      const light = 22 + (i % 5) * 2;
+      cx.fillStyle = `hsl(${hue}, 38%, ${light}%)`;
+      cx.beginPath(); path(feat); cx.fill();
+    });
+
+    // costa (outline terra)
+    cx.strokeStyle = 'rgba(160,210,130,0.30)';
+    cx.lineWidth = 1.2;
+    cx.beginPath(); path(land); cx.stroke();
+
+    // confini interni
+    cx.strokeStyle = 'rgba(0,0,0,0.22)';
+    cx.lineWidth = 0.8;
+    cx.beginPath(); path(borders); cx.stroke();
+
+    // poli ghiacciati
+    cx.fillStyle = 'rgba(210,230,250,0.40)';
+    const arctic  = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [
+      Array.from({length: 361}, (_, i) => [i - 180, 75])
+    ]}};
+    const antarc  = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [
+      Array.from({length: 361}, (_, i) => [i - 180, -75])
+    ]}};
+    cx.beginPath(); path(arctic);  cx.fill();
+    cx.beginPath(); path(antarc);  cx.fill();
+
+    return new THREE.CanvasTexture(tc);
   }
-  for (let la = -90; la <= 90; la += 30) {
-    const y = (90 - la) / 180 * 1024;
-    cx.beginPath(); cx.moveTo(0, y); cx.lineTo(2048, y); cx.stroke();
-  }
 
-  // continenti (forme semplificate)
-  cx.fillStyle = '#2a4520';
-  [
-    [[900,200],[960,190],[980,230],[970,280],[930,300],[890,280],[880,240]], // Europa
-    [[920,320],[970,310],[1010,360],[1020,480],[990,560],[950,580],[910,560],[880,490],[870,400],[890,340]], // Africa
-    [[980,180],[1100,160],[1250,150],[1350,200],[1380,280],[1360,350],[1280,360],[1180,320],[1050,300],[990,260]], // Asia
-    [[400,180],[500,170],[560,220],[530,320],[480,380],[420,360],[370,290],[360,220]], // N. America
-    [[460,400],[510,390],[540,450],[530,550],[500,620],[460,640],[430,600],[420,510],[430,440]], // S. America
-    [[1320,520],[1400,510],[1450,560],[1430,620],[1370,650],[1310,620],[1290,560]], // Australia
-    [[590,120],[650,110],[680,140],[660,190],[610,200],[575,170]], // Groenlandia
-  ].forEach(pts => {
-    cx.beginPath();
-    cx.moveTo(pts[0][0], pts[0][1]);
-    pts.slice(1).forEach(p => cx.lineTo(p[0], p[1]));
-    cx.closePath(); cx.fill();
-    cx.strokeStyle = 'rgba(50,80,35,0.5)'; cx.lineWidth = 1; cx.stroke();
-  });
+  // Mostra subito un globo base mentre carica
+  const og0 = cx.createLinearGradient(0, 0, 0, H);
+  og0.addColorStop(0, '#091e35'); og0.addColorStop(0.5, '#0d3050'); og0.addColorStop(1, '#091e35');
+  cx.fillStyle = og0; cx.fillRect(0, 0, W, H);
+  const texPlaceholder = new THREE.CanvasTexture(tc);
 
-  // poli
-  cx.fillStyle = 'rgba(200,220,240,0.35)';
-  cx.fillRect(0, 0, 2048, 55);
-  cx.fillRect(0, 969, 2048, 55);
-
-  const texture = new THREE.CanvasTexture(tc);
-
-  /* ── Globo ── */
+  /* ── Globo (creato subito con placeholder) ── */
   const globe = new THREE.Mesh(
     new THREE.SphereGeometry(1, 64, 64),
-    new THREE.MeshPhongMaterial({ map: texture, specular: new THREE.Color(0x163050), shininess: 18 })
+    new THREE.MeshPhongMaterial({ map: texPlaceholder, specular: new THREE.Color(0x163050), shininess: 18 })
   );
   globe.position.x = 0.55;
   scene.add(globe);
@@ -391,8 +419,20 @@ const GLOBE_DESTINATIONS = [
   // atmosfera
   globe.add(new THREE.Mesh(
     new THREE.SphereGeometry(1.025, 64, 64),
-    new THREE.MeshPhongMaterial({ color: 0x3377bb, transparent: true, opacity: 0.07, side: THREE.FrontSide })
+    new THREE.MeshPhongMaterial({ color: 0x3377bb, transparent: true, opacity: 0.08, side: THREE.FrontSide })
   ));
+
+  // carica TopoJSON reale (Natural Earth 110m via unpkg)
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    .then(r => r.json())
+    .then(world => {
+      const tex = drawGlobe(world);
+      globe.material.map = tex;
+      globe.material.needsUpdate = true;
+    })
+    .catch(() => {
+      // fallback silenzioso: il globo rimane con il placeholder
+    });
 
   /* ── Stelle ── */
   const sp = new Float32Array(1400 * 3);
